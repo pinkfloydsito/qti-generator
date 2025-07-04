@@ -1,6 +1,28 @@
 // Use legacy build for Node.js environments to avoid browser-specific APIs like DOMMatrix
 import * as PDFJS from 'pdfjs-dist/legacy/build/pdf.mjs';
 
+// Provide DOMMatrix polyfill for Windows environments where it might not be available
+if (typeof globalThis.DOMMatrix === 'undefined' && typeof global !== 'undefined') {
+  // Simple DOMMatrix polyfill for basic functionality
+  global.DOMMatrix = class DOMMatrix {
+    constructor(init) {
+      this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+      if (init) {
+        if (Array.isArray(init)) {
+          [this.a, this.b, this.c, this.d, this.e, this.f] = init;
+        }
+      }
+    }
+    translate(x, y) {
+      return new DOMMatrix([this.a, this.b, this.c, this.d, this.e + x, this.f + y]);
+    }
+    scale(sx, sy = sx) {
+      return new DOMMatrix([this.a * sx, this.b * sx, this.c * sy, this.d * sy, this.e, this.f]);
+    }
+  };
+  console.log('DOMMatrix polyfill installed for Windows compatibility');
+}
+
 // Simple PDF text extraction for Electron
 class PDFExtractor {
   constructor() {
@@ -10,10 +32,13 @@ class PDFExtractor {
 
   setupPDFJS() {
     try {
-      // For Electron, we primarily rely on `disableWorker: true` in getDocument options.
-      // No worker source is explicitly needed if workers are disabled.
-      this.pdfjs.GlobalWorkerOptions.workerSrc = false; // Ensure no worker is used
-      console.log('PDF.js configured for Electron environment (workers disabled)');
+      // For Electron, we need to properly disable workers
+      // Setting workerSrc to false can cause issues on Windows
+      if (typeof this.pdfjs.GlobalWorkerOptions !== 'undefined') {
+        // Don't set workerSrc to false, just don't set it at all
+        // The disableWorker: true option in getDocument is sufficient
+        console.log('PDF.js configured for Electron environment (workers will be disabled per document)');
+      }
     } catch (error) {
       console.warn('PDF.js setup warning:', error.message);
     }
@@ -60,7 +85,11 @@ class PDFExtractor {
         isEvalSupported: false,
         disableCreateObjectURL: true,
         stopAtErrors: false,
-        verbosity: 0 // Reduce console output
+        verbosity: 0, // Reduce console output
+        useSystemFonts: true, // Use system fonts instead of embedded fonts
+        disableFontFace: true, // Disable font loading that might use DOM APIs
+        cMapUrl: null, // Disable CMap loading
+        cMapPacked: false
       });
 
       const pdf = await loadingTask.promise;

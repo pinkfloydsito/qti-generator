@@ -11,10 +11,10 @@
     "dev:electron": "NODE_ENV=development electron . --dev",
     "build": "vite build",
     "build:electron": "npm run build && electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --publish=never",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder --publish=never",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -61,8 +61,16 @@
       "output": "build"
     },
     "win": {
-      "target": "nsis",
-      "icon": "logo.ico"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "logo.ico",
+      "requestedExecutionLevel": "asInvoker"
     },
     "mac": {
       "target": "dmg",
@@ -70,11 +78,18 @@
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": true,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "runAfterFinish": false,
       "deleteAppDataOnUninstall": false,
-      "include": "build/installer.nsh"
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "logo.ico",
+      "uninstallerIcon": "logo.ico",
+      "installerHeaderIcon": "logo.ico",
+      "include": "build/installer.nsh",
+      "guid": "a3c5c8e2-1f4d-4b7e-8a9c-2d3e4f5g6h7i"
     },
     "files": [
       "main.js",
@@ -82,7 +97,12 @@
       "preload.js",
       "dist/**/*",
       "src/**/*",
-      "node_modules/**/*"
-    ]
+      "!src/**/*.test.js",
+      "!**/.DS_Store",
+      "!**/.git/**",
+      "!**/node_modules/.bin/**"
+    ],
+    "extraFiles": [],
+    "compression": "normal"
   }
 }
